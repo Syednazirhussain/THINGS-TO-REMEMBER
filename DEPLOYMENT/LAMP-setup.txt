@@ -1,0 +1,112 @@
+LAMP + SSL Setup for https://results.ae
+================================
+
+System:
+- Ubuntu 24.04 LTS
+- Apache
+- MySQL
+- PHP 8.3
+- Let’s Encrypt SSL
+
+--------------------------------
+1. Update System
+--------------------------------
+apt update && apt upgrade -y
+
+--------------------------------
+2. Install Apache
+--------------------------------
+apt install apache2 -y
+systemctl enable apache2
+systemctl start apache2
+
+--------------------------------
+3. Install MySQL
+--------------------------------
+apt install mysql-server -y
+systemctl enable mysql
+systemctl start mysql
+mysql_secure_installation
+
+--------------------------------
+4. Install PHP
+--------------------------------
+apt install php php-cli php-common php-mysql php-curl php-gd php-mbstring php-xml php-zip php-bcmath libapache2-mod-php -y
+
+--------------------------------
+5. Create Website Directory & Test File
+--------------------------------
+mkdir -p /var/www/html/useo
+nano /var/www/html/useo/index.php
+
+File content:
+<?php
+echo "This is a test file.";
+
+Permissions:
+chown -R www-data:www-data /var/www/html/useo
+chmod -R 755 /var/www/html/useo
+
+--------------------------------
+6. Create Apache Virtual Host
+--------------------------------
+nano /etc/apache2/sites-available/results.ae.conf
+
+<VirtualHost *:80>
+    ServerName results.ae
+    ServerAlias www.results.ae
+    DocumentRoot /var/www/html/useo
+
+    <Directory /var/www/html/useo>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/results.ae_error.log
+    CustomLog ${APACHE_LOG_DIR}/results.ae_access.log combined
+</VirtualHost>
+
+Enable site:
+a2ensite results.ae.conf
+a2enmod rewrite
+a2dissite 000-default.conf
+systemctl reload apache2
+apachectl configtest
+
+--------------------------------
+7. Enable Firewall
+--------------------------------
+ufw allow OpenSSH
+ufw allow 'Apache Full'
+ufw enable
+ufw status
+
+--------------------------------
+8. Install Let’s Encrypt SSL
+--------------------------------
+apt install certbot python3-certbot-apache -y
+
+Request certificate:
+certbot --apache -d results.ae -d www.results.ae
+
+Select:
+- Agree to terms
+- Redirect HTTP to HTTPS
+
+--------------------------------
+9. Test SSL Renewal
+--------------------------------
+certbot renew --dry-run
+
+--------------------------------
+10. Final Test
+--------------------------------
+Visit:
+https://results.ae
+
+Expected output:
+This is a test file.
+
+--------------------------------
+END OF FILE
+--------------------------------

@@ -1,0 +1,156 @@
+LAMP + SSL Setup for https://results.ae
+================================
+
+This document explains each command briefly so you understand
+WHAT it does and WHY it is needed.
+
+System:
+- Ubuntu 24.04 LTS
+- Apache Web Server
+- MySQL Database
+- PHP 8.3
+- Let’s Encrypt SSL
+
+--------------------------------
+1. Update System
+--------------------------------
+apt update && apt upgrade -y
+# Updates package list and upgrades installed packages to latest versions
+
+--------------------------------
+2. Install Apache
+--------------------------------
+apt install apache2 -y
+# Installs Apache web server
+
+systemctl enable apache2
+# Starts Apache automatically on boot
+
+systemctl start apache2
+# Starts Apache service immediately
+
+--------------------------------
+3. Install MySQL
+--------------------------------
+apt install mysql-server -y
+# Installs MySQL database server
+
+systemctl enable mysql
+# Enables MySQL at system startup
+
+systemctl start mysql
+# Starts MySQL service
+
+mysql_secure_installation
+# Secures MySQL (root password, remove test DB, disable remote root)
+
+--------------------------------
+4. Install PHP
+--------------------------------
+apt install php php-cli php-common php-mysql php-curl php-gd php-mbstring php-xml php-zip php-bcmath libapache2-mod-php -y
+# Installs PHP and common extensions required by most PHP applications
+
+--------------------------------
+5. Create Website Directory & Test File
+--------------------------------
+mkdir -p /var/www/html/useo
+# Creates the website root directory
+
+nano /var/www/html/useo/index.php
+# Creates PHP file for testing website
+
+File content:
+<?php
+echo "This is a test file.";
+# Outputs text when site is accessed
+
+Permissions:
+chown -R www-data:www-data /var/www/html/useo
+# Assigns Apache user ownership
+
+chmod -R 755 /var/www/html/useo
+# Sets secure read/execute permissions
+
+--------------------------------
+6. Create Apache Virtual Host
+--------------------------------
+nano /etc/apache2/sites-available/results.ae.conf
+# Creates a site configuration for results.ae
+
+<VirtualHost *:80>
+    ServerName results.ae
+    ServerAlias www.results.ae
+    DocumentRoot /var/www/html/useo
+
+    <Directory /var/www/html/useo>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/results.ae_error.log
+    CustomLog ${APACHE_LOG_DIR}/results.ae_access.log combined
+</VirtualHost>
+# Defines domain, document root, permissions and logs
+
+Enable site:
+a2ensite results.ae.conf
+# Enables the new virtual host
+
+a2enmod rewrite
+# Enables URL rewriting (required by many apps)
+
+a2dissite 000-default.conf
+# Disables default Apache site
+
+systemctl reload apache2
+# Reloads Apache with new configuration
+
+apachectl configtest
+# Checks Apache config for syntax errors
+
+--------------------------------
+7. Enable Firewall
+--------------------------------
+ufw allow OpenSSH
+# Allows SSH access (important to avoid lockout)
+
+ufw allow 'Apache Full'
+# Allows HTTP (80) and HTTPS (443)
+
+ufw enable
+# Activates firewall
+
+ufw status
+# Displays firewall status and allowed ports
+
+--------------------------------
+8. Install Let’s Encrypt SSL
+--------------------------------
+apt install certbot python3-certbot-apache -y
+# Installs Certbot for SSL certificate management
+
+certbot --apache -d results.ae -d www.results.ae
+# Requests SSL certificate and configures Apache automatically
+
+# Select:
+# - Agree to terms
+# - Redirect HTTP to HTTPS
+
+--------------------------------
+9. Test SSL Renewal
+--------------------------------
+certbot renew --dry-run
+# Tests automatic SSL renewal without making changes
+
+--------------------------------
+10. Final Test
+--------------------------------
+Visit in browser:
+https://results.ae
+
+Expected output:
+This is a test file.
+
+--------------------------------
+END OF FILE
+--------------------------------
